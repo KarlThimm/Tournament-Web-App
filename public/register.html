@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<head>
+    <script defer src="/__/firebase/10.4.0/firebase-app-compat.js"></script>
+    <!-- include only the Firebase features as you need -->
+    <script defer src="/__/firebase/10.4.0/firebase-auth-compat.js"></script>
+    <script defer src="/__/firebase/10.4.0/firebase-database-compat.js"></script>
+    <script defer src="/__/firebase/10.4.0/firebase-firestore-compat.js"></script>
+    <script defer src="/__/firebase/10.4.0/firebase-functions-compat.js"></script>
+    <script defer src="/__/firebase/10.4.0/firebase-messaging-compat.js"></script>
+    <script defer src="/__/firebase/10.4.0/firebase-storage-compat.js"></script>
+    <script defer src="/__/firebase/10.4.0/firebase-analytics-compat.js"></script>
+    <script defer src="/__/firebase/10.4.0/firebase-remote-config-compat.js"></script>
+    <script defer src="/__/firebase/10.4.0/firebase-performance-compat.js"></script>
+    <!-- 
+      initialize the SDK after all desired features are loaded, set useEmulator to false
+      to avoid connecting the SDK to running emulators.
+    -->
+    <script defer src="/__/firebase/init.js?useEmulator=true"></script>
+</head>
+<body>
+    <h1 id = 'pagetitle'>Tournament Registration</h1>
+    <form id="registrationForm">
+        <label for="name">Name:</label>
+        <input type="text" id="name" required><br>
+        <label for="email">Email:</label>
+        <input type="email" id="email" required><br>
+        <button type="submit">Register</button>
+    </form>
+        <button id="showBracket">Show Bracket</button>
+        <button id="hideBracket" style="display:none;">Hide Bracket</button>
+        <div id="registeredUsersContainer" style="display:none;"></div>
+        <button id="generateTournament" style="display:none;">Generate Tournament</button>
+        <button id='selectWinner' style='display:none;'>Select Winner</button>
+    <div id='winnerSelection' style='display:none;'>
+        <label for='winner'>Select Winner:</label>
+        <select id='winner'></select>
+        <button id='confirmWinner'>Confirm Winner</button>
+        <div id='round2' style='display:none;'></div>
+        <div id='round3' style='display:none;'></div>
+        <div id='round4' style='display:none;'</div>
+    </div>
+        <div id="tournamentContainer" style="display:none;"></div>
+</body>
+  <script type="module">
+    
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-analytics.js";
+    import { getAuth } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
+    import "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+    apiKey: "AIzaSyDPS3Y7K9MS49oM-36cgAH_sDhEL-MUX88",
+    authDomain: "tournamentwebsite-28171.firebaseapp.com",
+    projectId: "tournamentwebsite-28171",
+    storageBucket: "tournamentwebsite-28171.appspot.com",
+    messagingSenderId: "429418469412",
+    appId: "1:429418469412:web:6ef39bee15f8c5fda0a0b1",
+    measurementId: "G-ZZ6BGH5QVR"
+  };
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);  
+  
+  document.addEventListener('DOMContentLoaded', function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const tournamentID = urlParams.get('tournamentID');
+        const registrationForm = document.getElementById('registrationForm');
+        const showBracketButton = document.getElementById('showBracket');
+        const hideBracketButton = document.getElementById('hideBracket');
+        const registeredUsersContainer = document.getElementById('registeredUsersContainer');
+        const generateTournamentButton = document.getElementById('generateTournament');
+        const tournamentContainer = document.getElementById('tournamentContainer');
+        const selectWinnerButton = document.getElementById('selectWinner');
+        const winnerSelection = document.getElementById('winnerSelection');
+        const confirmWinnerButton = document.getElementById('confirmWinner');
+        let currentRound = 1;        
+
+        registrationForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+
+            firebase.auth().onAuthStateChanged(function(user) {
+                if (user) {
+                    const person = document.getElementById('name').value;
+                    const email = document.getElementById('email').value;
+                    console.log('User is signed in');
+                    console.log('Current User:', user.uid);
+
+                    const tournamentRegistrationsRef = firebase.database().ref(`tournaments/${tournamentID}`);
+                    const newRegistrationRef = tournamentRegistrationsRef.push();
+                    newRegistrationRef.set({
+                        person: person,
+                        email: email
+                    })
+                    .then(() => {
+                        console.log('Registration successful');
+                    })
+                    .catch((error) => {
+                        console.error('Error registering: ', error);
+                    });
+                } else {
+                    console.log('User is not logged in');
+                }
+            });
+        });
+
+        showBracketButton.addEventListener('click', function() {
+            registeredUsersContainer.style.display = 'block';
+            hideBracketButton.style.display = 'inline';
+            showBracketButton.style.display = 'none';
+            registrationForm.style.display = 'none';
+            pagetitle.textContent = 'Tournament Bracket and List of Registered Users';
+            generateTournamentButton.style.display = 'inline';
+            tournamentContainer.style.display = 'block';
+            selectWinnerButton.style.display = 'inline';
+
+            const tournamentRegistrationsRef = firebase.database().ref(`tournaments/${tournamentID}`);
+            tournamentRegistrationsRef.once('value').then((snapshot) => {
+                registeredUsersContainer.innerHTML = '';
+                snapshot.forEach((childSnapshot) => {
+                    const registrationData = childSnapshot.val();
+                    const personName = registrationData.person;
+                    const personElement = document.createElement('div');
+                    personElement.textContent = personName;
+                    registeredUsersContainer.appendChild(personElement);
+                });
+            });
+        });
+
+        hideBracketButton.addEventListener('click', function() {
+            registeredUsersContainer.style.display = 'none';
+            hideBracketButton.style.display = 'none';
+            showBracketButton.style.display = 'inline';
+            registrationForm.style.display = 'block';
+            pagetitle.textContent = 'Tournament Registration';
+            generateTournamentButton.style.display = 'none';
+            tournamentContainer.style.display = 'none';
+            selectWinnerButton.style.display = 'none';
+            winnerSelection.style.display = 'none';
+        });
+
+        selectWinnerButton.addEventListener('click', function() {
+            winnerSelection.style.display = 'block';
+            const winnerSelect = document.getElementById('winner');
+            winnerSelect.innerHTML = '';
+
+            // Find the match elements and add their players as options
+            const matches = document.querySelectorAll('.match');
+            matches.forEach((match, index) => {
+                const option1 = document.createElement('option');
+                option1.value = match.querySelector('.player').textContent;
+                option1.textContent = match.querySelector('.player').textContent;
+                winnerSelect.appendChild(option1);
+
+                const option2 = document.createElement('option');
+                option2.value = match.querySelector('.player:last-child').textContent;
+                option2.textContent = match.querySelector('.player:last-child').textContent;
+                winnerSelect.appendChild(option2);
+            });
+        });
+
+        confirmWinnerButton.addEventListener('click', function() {
+          const winnerSelect = document.getElementById('winner');
+          const selectedWinner = winnerSelect.value;
+          console.log(`Selected Winner: ${selectedWinner}`);
+          const nextRoundMatchElement = document.querySelector(`[data-match-id="${selectedWinner}"]`);
+          const nextRound = parseInt(currentRound) + 1;
+          const nextRoundContainer = document.getElementById(`round${nextRound}`);
+    // Find the next round match element
+
+          if (nextRoundMatchElement) {
+          nextRoundContainer.appendChild(nextRoundMatchElement.cloneNode(true));
+          // Update the next round match with the selected winner
+             nextRoundMatchElement.querySelector('.player:last-child').textContent = selectedWinner;
+          } else {
+            console.error('Next round match not found');
+          }
+        winnerSelection.style.display = 'none';
+});
+
+        generateTournamentButton.addEventListener('click', function() {
+            const registeredUsers = Array.from(registeredUsersContainer.children);
+            const shuffledUsers = registeredUsers.sort(() => Math.random() - 0.5);
+
+            function displayGeneratedMatches(shuffledUsers) {
+                const tournamentContainer = document.getElementById('tournamentContainer');
+                tournamentContainer.innerHTML = '';
+            
+             for (let i = 0; i < shuffledUsers.length; i += 2) {
+                    const matchElement = document.createElement('div');
+                    matchElement.classList.add('match');
+                    matchElement.id = `match${i / 2 + 1}`;
+                    matchElement.dataset.matchId = i / 2 + 1;
+                    matchElement.dataset.round = 1; // Round 1
+                    matchElement.innerHTML = `
+                        <div class="player">${shuffledUsers[i].textContent}</div>
+                        <div class="vs">vs</div>
+                        <div class="player">${shuffledUsers[i+1].textContent}</div>
+                    `;
+                    tournamentContainer.appendChild(matchElement);
+                }
+
+                tournamentContainer.style.display = 'block';
+            }
+
+            displayGeneratedMatches(shuffledUsers);
+        });
+    });
+</script>
+<style>
+  body {
+  font-family: Arial, sans-serif;
+  background-color: #f5f5f5;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+h1 {
+  text-align: center;
+  color: #007bff;
+}
+
+form {
+  text-align: center;
+  margin-top: 20px;
+}
+
+label,
+input {
+  display: block;
+  margin-bottom: 10px;
+}
+
+input {
+  width: 200px;
+  padding: 8px;
+}
+
+button {
+  background-color: #007bff;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+button:hover {
+  background-color: #0056b3;
+}
+
+#registeredUsersContainer,
+#tournamentContainer,
+#winnerSelection {
+  margin-top: 20px;
+}
+
+#tournamentContainer {
+  width: 80%;
+  max-width: 600px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.match {
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 10px;
+  margin-bottom: 10px;
+  background-color: #fff;
+}
+
+.match .player {
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+.match .vs {
+  font-size: 16px;
+  text-align: center;
+}
+
+#winnerSelection label,
+#winnerSelection select {
+  display: block;
+  margin-bottom: 10px;
+}
+
+#winnerSelection select {
+  width: 100%;
+  padding: 8px;
+}
+
+#winnerSelection button {
+  margin-top: 10px;
+}
+</style>
+</html>

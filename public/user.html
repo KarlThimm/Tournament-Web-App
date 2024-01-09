@@ -1,0 +1,202 @@
+ <!DOCTYPE html>
+<head>
+  <script defer src="/__/firebase/10.4.0/firebase-app-compat.js"></script>
+    <!-- include only the Firebase features as you need -->
+    <script defer src="/__/firebase/10.4.0/firebase-auth-compat.js"></script>
+    <script defer src="/__/firebase/10.4.0/firebase-database-compat.js"></script>
+    <script defer src="/__/firebase/10.4.0/firebase-firestore-compat.js"></script>
+    <script defer src="/__/firebase/10.4.0/firebase-functions-compat.js"></script>
+    <script defer src="/__/firebase/10.4.0/firebase-messaging-compat.js"></script>
+    <script defer src="/__/firebase/10.4.0/firebase-storage-compat.js"></script>
+    <script defer src="/__/firebase/10.4.0/firebase-analytics-compat.js"></script>
+    <script defer src="/__/firebase/10.4.0/firebase-remote-config-compat.js"></script>
+    <script defer src="/__/firebase/10.4.0/firebase-performance-compat.js"></script>
+    <!-- 
+      initialize the SDK after all desired features are loaded, set useEmulator to false
+      to avoid connecting the SDK to running emulators.
+    -->
+    <script defer src="/__/firebase/init.js?useEmulator=true"></script>
+</head>
+  <body>
+      <h1>My Tournaments</h1>
+      <div id="tournament-container"></div>
+      <form id="addTournamentForm">
+      <label for="name">Name:</label>
+      <input type="text" id="name" required><br>
+
+      <label for="date">Date:</label>
+      <input type="text" id="date" required><br>
+
+      <label for="location">Location:</label>
+      <input type="text" id="location" required><br>
+
+      <button type="submit">Add Tournament</button>
+</form>
+  </body>
+  <script type="module">
+    
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-analytics.js";
+    import { getAuth } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
+    import "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+    apiKey: "AIzaSyDPS3Y7K9MS49oM-36cgAH_sDhEL-MUX88",
+    authDomain: "tournamentwebsite-28171.firebaseapp.com",
+    projectId: "tournamentwebsite-28171",
+    storageBucket: "tournamentwebsite-28171.appspot.com",
+    messagingSenderId: "429418469412",
+    appId: "1:429418469412:web:6ef39bee15f8c5fda0a0b1",
+    measurementId: "G-ZZ6BGH5QVR"
+  };
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
+ 
+  firebase.auth().onAuthStateChanged(function(user) {
+            if (user) {
+                // User is signed in.
+                console.log('User is logged in');
+                const userTournamentsRef = firebase.database().ref(`users/${user.uid}/tournaments`);
+
+                // Fetch Data
+                userTournamentsRef.once('value').then((snapshot) => {
+                    snapshot.forEach((childSnapshot) => {
+                        const tournamentData = childSnapshot.val();
+                        const tournamentID = childSnapshot.key;
+
+                        // Process and display data here
+                        const tournamentContainer = document.getElementById('tournament-container');
+                        tournamentContainer.innerHTML += `
+                            <div>
+                                <h2>${tournamentData.name}</h2>
+                                <p>Date: ${tournamentData.date}</p>
+                                <p>Location: ${tournamentData.location}</p>
+                                <a href="register.html?tournamentID=${tournamentID}">Register</a>
+                            </div>
+                        `;
+                    });
+                });
+
+            } else {
+                // No user is signed in.
+                console.log('User is not logged in');
+                // Redirect to login page if necessary
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {      
+            const addTournamentForm = document.getElementById('addTournamentForm');
+            addTournamentForm.addEventListener('submit', function(event) {
+                event.preventDefault();
+
+                const name = document.getElementById('name').value;
+                const date = document.getElementById('date').value;
+                const location = document.getElementById('location').value;
+
+                const user = firebase.auth().currentUser;
+                const userTournamentsRef = firebase.database().ref(`users/${user.uid}/tournaments`);
+
+                const newTournamentRef = userTournamentsRef.push();
+                const tournamentID = newTournamentRef.key;
+
+                newTournamentRef.set({
+                    name: name,
+                    date: date,
+                    location: location,
+                    tournamentID: tournamentID
+                })
+                .then(() => {
+                    console.log("Tournament added successfully");
+                })
+                .catch((error) => {
+                    console.error("Error adding tournament: ", error);
+                });
+
+                // Reset the form after submission
+                addTournamentForm.reset();
+            });
+        }); 
+    </script>
+
+    <style>
+      body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+    margin: 0;
+    padding: 20px;
+}
+
+h1 {
+    color: navy;
+    text-align: center;
+}
+
+#tournament-container {
+    max-width: 600px;
+    margin: 0 auto;
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+form {
+    max-width: 600px;
+    margin: 20px auto;
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+}
+
+input {
+    width: calc(100% - 20px);
+    padding: 8px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    box-sizing: border-box;
+}
+
+button {
+    padding: 10px 20px;
+    background-color: navy;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+button:hover {
+    background-color: #1e3d5a;
+}
+
+a {
+    display: inline-block;
+    padding: 8px 16px;
+    background-color: #1e3d5a;
+    color: #fff;
+    text-decoration: none;
+    border-radius: 5px;
+    margin-top: 10px;
+}
+
+a:hover {
+    background-color: #123544;
+}
+
+a, a:hover {
+    text-decoration: none;
+    color: #fff;
+}
+    </style>
+</body>
+</html>
+
